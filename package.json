@@ -1,0 +1,79 @@
+{
+  "name": "pool-ctrl",
+  "productName": "pool-ctrl",
+  "version": "0.0.1",
+  "description": "A Pool Controller built on top of a Raspberry PI.",
+  "repository": {
+    "url": "https://github.com/smnplicity/node-rpi-device-pool-ctrl"
+  },
+  "main": ".webpack/main",
+  "scripts": {
+    "start": "electron-forge start",
+    "make": "electron-forge make --arch=arm64",
+    "makedev": "electron-forge make",
+    "lint": "eslint --ext .ts,.tsx ."
+  },
+  "keywords": [
+    "raspberry pi device",
+    "raspberry pi pool",
+    "rpi pool",
+    "raspberry pi pool controller",
+    "rpi pool controller"
+  ],
+  "author": {
+    "name": "smnplicity",
+    "email": "simon.norelli@gmail.com"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@electron-forge/cli": "^6.1.1",
+    "@electron-forge/maker-deb": "^6.1.1",
+    "@electron-forge/maker-zip": "^6.1.1",
+    "@electron-forge/plugin-webpack": "^6.1.1",
+    "@types/react": "^18.2.7",
+    "@types/react-dom": "^18.2.4",
+    "@typescript-eslint/eslint-plugin": "^5.60.0",
+    "@typescript-eslint/parser": "^5.60.0",
+    "@vercel/webpack-asset-relocator-loader": "^1.7.3",
+    "css-loader": "^6.0.0",
+    "electron": "25.0.0",
+    "eslint": "^8.43.0",
+    "eslint-config-standard-with-typescript": "^35.0.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-n": "^15.7.0",
+    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-react": "^7.32.2",
+    "fork-ts-checker-webpack-plugin": "^7.2.13",
+    "node-loader": "^2.0.0",
+    "style-loader": "^3.0.0",
+    "ts-loader": "^9.2.2",
+    "ts-node": "^10.0.0",
+    "typescript": "~4.5.4"
+  },
+  "dependencies": {
+    "@electron/asar": "^3.2.4",
+    "@fortawesome/fontawesome-svg-core": "^6.4.0",
+    "@fortawesome/free-solid-svg-icons": "^6.4.0",
+    "@fortawesome/react-fontawesome": "^0.2.0",
+    "@node-rpi-gpio/ds18b20": "^0.0.1",
+    "@node-rpi-gpio/ina226": "file:../node-rpi-gpio-ina226",
+    "@smnplicity/node-dht-sensor": "^0.4.4",
+    "@types/electron-store": "^3.2.0",
+    "@types/luxon": "^3.3.1",
+    "@types/node-wifi": "^2.0.0",
+    "async-mqtt": "^2.6.3",
+    "electron-debug": "^3.2.0",
+    "electron-log": "^4.4.8",
+    "electron-squirrel-startup": "^1.0.0",
+    "electron-store": "^8.1.0",
+    "electron-unhandled": "^4.0.1",
+    "guid-typescript": "^1.0.9",
+    "luxon": "^3.4.0",
+    "node-wifi": "^2.0.16",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-json-pretty": "^2.2.0",
+    "react-router-dom": "^6.8.1",
+    "tuyapi": "^7.5.2"
+  }
+}
