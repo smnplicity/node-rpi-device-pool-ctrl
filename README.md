@@ -39,10 +39,15 @@ The system has been designed to provide different types of devices/sensors for e
     }
   },
   "chlorinator":{
-    "type":"astralvx7",
-    "configuration":{
+    "cell":{
       "in1":23,
-      "in2":24
+      "in2":24,
+      "descaleCycleDays": 14
+    },
+    powerConsumption: {
+      "address": 64,
+      "rShunt": 0.1,
+      "maxMa": 10
     }
   },
   "water":{

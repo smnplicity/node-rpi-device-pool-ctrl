@@ -96,11 +96,12 @@ export default class Chlorinator implements IChlorinator {
         .on("change", (data: Ina226DataChange) => {
           logger.info(JSON.stringify(data));
 
-          const kw = Number((data.power / 1000.0).toFixed(2));
+          const kw = Number((Math.abs(data.power) / 1000.0).toFixed(2));
+          const current = Math.abs(data.current);
 
           this.webContents.send(ChlorinatorChannels.Voltage, data.busVoltage);
           this.webContents.send(ChlorinatorChannels.kW, kw);
-          this.webContents.send(ChlorinatorChannels.mA, data.current);
+          this.webContents.send(ChlorinatorChannels.mA, current);
 
           if (this.mqttAdapter) {
             this.mqttAdapter.publishAsync(
@@ -113,7 +114,7 @@ export default class Chlorinator implements IChlorinator {
             );
             this.mqttAdapter.publishAsync(
               ChlorinatorChannels.mA,
-              data.current.toString()
+              current.toString()
             );
           }
         })

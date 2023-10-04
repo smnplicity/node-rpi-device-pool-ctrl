@@ -82,9 +82,9 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
           this.webContents.send(PumpChannels.mA, null);
 
           logger.error("Disconnected.");
-
-          if (!this.device.isConnected()) this.device.connect();
         }
+
+        this.connect();
       })
       .on("data", this.analyseUpdate)
       .on("dp-refresh", this.analyseUpdate)
@@ -119,7 +119,7 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
         }
       });
 
-    this.device.connect();
+    this.connect();
   }
 
   switch = (value: SwitchState) => {
@@ -138,6 +138,12 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
     super.on(channel, listener);
 
     return this;
+  };
+
+  private connect = () => {
+    this.device.find().then(() => {
+      this.device.connect();
+    });
   };
 
   private analyseUpdate = (incoming: DPSObject) => {
