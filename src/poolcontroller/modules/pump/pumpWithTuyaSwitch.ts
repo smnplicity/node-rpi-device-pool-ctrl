@@ -141,9 +141,12 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
   };
 
   private connect = () => {
-    this.device.find().then(() => {
-      this.device.connect();
-    });
+    this.device
+      .find()
+      .then(() => {
+        this.device.connect();
+      })
+      .catch(this.connect);
   };
 
   private analyseUpdate = (incoming: DPSObject) => {
