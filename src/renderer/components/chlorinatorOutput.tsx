@@ -23,7 +23,6 @@ export default function ChlorinatorOutput() {
     }
 
     changeDebounce = setTimeout(() => {
-      console.log("changeDebounce", draftValue, value);
       if (draftValue != value) {
         window.electron.ipcRenderer.sendMessage(ChlorinatorChannels.SetOutput, [
           draftValue,

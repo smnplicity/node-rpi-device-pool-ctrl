@@ -88,14 +88,12 @@ export default class Chlorinator implements IChlorinator {
           logger.info(`INA226 connected: ${JSON.stringify(connectInfo)}`);
         })
         .on("debug", (data: any) => {
-          logger.debug(`INA226: ${data}`);
+          //logger.debug(`INA226: ${data}`);
         })
         .on("error", (error: Error) => {
           logger.error("INA226", error);
         })
         .on("change", (data: Ina226DataChange) => {
-          logger.info(JSON.stringify(data));
-
           const kw = Number((Math.abs(data.power) / 1000.0).toFixed(2));
           const current = Math.abs(data.current);
 
