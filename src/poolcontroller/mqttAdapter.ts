@@ -21,6 +21,8 @@ export default class MqttAdapter {
 
   private subscribedTopics = new Set<string>();
 
+  private buffer: Record<string, any> = {};
+
   constructor(
     mqttGlobalConfig: MqttGlobalConfiguration,
     mqttClient?: AsyncMqttClient
@@ -33,6 +35,13 @@ export default class MqttAdapter {
 
       if (this.subscribedTopics.has(fullTopic))
         this.emitter.emit(fullTopic, message);
+    });
+
+    this.mqttClient.on("reconnect", () => {
+      for (const topic in this.buffer)
+        this.publishInternalAsync(topic, this.buffer[topic]);
+
+      this.buffer = {};
     });
   }
 
@@ -50,19 +59,26 @@ export default class MqttAdapter {
     return this;
   };
 
-  publishAsync = async (topic: string, message: Buffer | string) => {
+  publishAsync = (topic: string, message: Buffer | string) =>
+    this.publishInternalAsync(topic, message);
+
+  private publishInternalAsync = async (
+    topic: string,
+    message: Buffer | string,
+    ignoreBuffer?: boolean
+  ) => {
     try {
-      const mqttClient = await this.getMqttClientAsync();
+      if (!this.mqttClient) return;
 
-      if (!mqttClient) return;
+      if (!ignoreBuffer) this.buffer[topic] = message;
 
-      if (!mqttClient.connected) return;
+      if (!this.mqttClient.connected) return;
 
-      await mqttClient.unsubscribe(this.toFullTopic(topic));
+      await this.mqttClient.unsubscribe(this.toFullTopic(topic));
 
-      await mqttClient.publish(this.toFullTopic(topic), message);
+      await this.mqttClient.publish(this.toFullTopic(topic), message);
 
-      await mqttClient.subscribe(this.toFullTopic(topic));
+      await this.mqttClient.subscribe(this.toFullTopic(topic));
     } catch (e) {
       logger.error("Couldn't publish to mqtt", e);
     }
@@ -71,23 +87,13 @@ export default class MqttAdapter {
   private checkMqttSubscription = async (topic: string) => {
     const fullTopic = this.toFullTopic(topic);
 
-    const mqttClient = await this.getMqttClientAsync();
-
     if (!this.subscribedTopics.has(fullTopic)) {
-      await mqttClient.subscribe(fullTopic);
+      await this.mqttClient.subscribe(fullTopic);
 
       logger.debug(`Subscribed to ${fullTopic}`);
 
       this.subscribedTopics.add(fullTopic);
     }
-  };
-
-  private getMqttClientAsync = async () => {
-    if (!this.mqttClient) {
-      // retry the connection, and resubscribe if needed.
-    }
-
-    return this.mqttClient;
   };
 
   private toFullTopic = (topic: string) => {

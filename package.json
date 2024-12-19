@@ -56,7 +56,7 @@
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@node-rpi-gpio/ds18b20": "^0.0.1",
-    "@node-rpi-gpio/ina226": "file:../node-rpi-gpio-ina226",
+    "@node-rpi-gpio/ina226": "^0.0.1",
     "@smnplicity/node-dht-sensor": "^0.4.4",
     "@types/electron-store": "^3.2.0",
     "@types/luxon": "^3.3.1",

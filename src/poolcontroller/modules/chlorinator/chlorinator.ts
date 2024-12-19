@@ -50,35 +50,16 @@ export default class Chlorinator implements IChlorinator {
     this.outputValue = initialOutputValue;
 
     this.ipcMain
-      .on(ChlorinatorChannels.SetOutput, async (_, args) => {
-        const value = Math.min(100, Math.max(0, args[0] as number));
-
-        logger.debug(`${this.outputValue} to ${value} (raw: ${args})`);
-
-        if (value === this.outputValue) return;
-
-        this.outputValue = value;
-
-        try {
-          Store.set(STORE_KEYS.ChlorinatorOutput, this.outputValue);
-        } catch (e) {
-          logger.error("Couldn't persist output value to store.", e);
-        }
-
-        this.webContents.send(ChlorinatorChannels.Output, this.outputValue);
-
-        if (this.mqttAdapter) {
-          this.mqttAdapter.publishAsync(
-            ChlorinatorChannels.Output,
-            this.outputValue.toString()
-          );
-        }
-
-        this.pwmWrite(value);
-      })
+      .on(ChlorinatorChannels.SetOutput, async (_, args) =>
+        this.setOutput(args[0] as number)
+      )
       .on(ChlorinatorChannels.Output, (event) =>
         event.sender.send(ChlorinatorChannels.Output, this.outputValue)
       );
+
+    this.mqttAdapter.on(ChlorinatorChannels.SetOutput, (message) =>
+      this.setOutput(parseFloat(message.toString()))
+    );
 
     this.webContents.send(ChlorinatorChannels.Output, this.outputValue);
 
@@ -133,6 +114,33 @@ export default class Chlorinator implements IChlorinator {
     }
 
     this.pwmWrite(switchedValue);
+  };
+
+  private setOutput = (rawValue: number) => {
+    const value = Math.min(100, Math.max(0, rawValue));
+
+    logger.debug(`${this.outputValue} to ${value} (raw: ${rawValue})`);
+
+    if (value === this.outputValue) return;
+
+    this.outputValue = value;
+
+    try {
+      Store.set(STORE_KEYS.ChlorinatorOutput, this.outputValue);
+    } catch (e) {
+      logger.error("Couldn't persist output value to store.", e);
+    }
+
+    this.webContents.send(ChlorinatorChannels.Output, this.outputValue);
+
+    if (this.mqttAdapter) {
+      this.mqttAdapter.publishAsync(
+        ChlorinatorChannels.Output,
+        this.outputValue.toString()
+      );
+    }
+
+    this.pwmWrite(value);
   };
 
   private beginCycle = async (config: ChlorinatorConfiguration) => {

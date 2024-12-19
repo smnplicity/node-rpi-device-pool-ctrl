@@ -61,21 +61,17 @@ const pollDht = async (
         value.humidity.toFixed(1)
       );
     }
-
-    setTimeout(
-      () => pollDht(webContents, gpio, type, mqttAdapter, errorReported),
-      10000
-    );
   } catch (e) {
     if (!errorReported) {
       errorReported = true;
       logger.error(e);
     }
-    setTimeout(
-      () => pollDht(webContents, gpio, type, mqttAdapter, errorReported),
-      5000
-    );
   }
+
+  setTimeout(
+    () => pollDht(webContents, gpio, type, mqttAdapter, errorReported),
+    30000
+  );
 };
 
 export default createAmbientTemperatureMonitor;

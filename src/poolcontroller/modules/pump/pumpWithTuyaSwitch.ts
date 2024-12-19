@@ -164,8 +164,6 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
           case DpsIndex.Switch: {
             const newValue = this.getDpsValue<SwitchState>(idx, incoming);
 
-            logger.debug("analyseUpdate", incoming);
-
             super.emit("switch", newValue);
 
             break;
