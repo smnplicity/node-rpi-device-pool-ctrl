@@ -12,9 +12,13 @@ Tested on a Pi Zero W but didn't have adequate specs.
 
 1. Clone the repository
 2. `npm i`
-3. `npm make` (note: for this to work correctly, it needs to be built in arm64 architecture). The .deb file can be founded in out/make/deb/arm64.
+3. `npm run make` (note: for this to work correctly, it needs to be built in arm64 architecture). The .deb file can be founded in out/make/deb/arm64.
 4. Install pigpio on the Raspberry PI
 5. `sudo apt-get install <pool-ctrl.deb>`
+
+## Development
+
+`npm run start`
 
 ## Configuration
 
