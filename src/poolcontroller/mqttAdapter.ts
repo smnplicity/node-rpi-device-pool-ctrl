@@ -2,7 +2,7 @@ import EventEmitter from "events";
 
 import log from "electron-log";
 
-import mqtt, { AsyncMqttClient } from "async-mqtt";
+import mqtt, { MqttClient } from "mqtt";
 
 import { MqttGlobalConfiguration } from "./types";
 
@@ -15,7 +15,7 @@ export type MqttAdapterUnsubscribeCallback = () => Promise<void>;
 export default class MqttAdapter {
   private emitter = new EventEmitter();
 
-  private mqttClient?: AsyncMqttClient;
+  private mqttClient?: MqttClient;
 
   private mqttGlobalConfig: MqttGlobalConfiguration;
 
@@ -25,7 +25,7 @@ export default class MqttAdapter {
 
   constructor(
     mqttGlobalConfig: MqttGlobalConfiguration,
-    mqttClient?: AsyncMqttClient
+    mqttClient?: MqttClient
   ) {
     this.mqttGlobalConfig = mqttGlobalConfig;
     this.mqttClient = mqttClient;
@@ -37,7 +37,17 @@ export default class MqttAdapter {
         this.emitter.emit(fullTopic, message);
     });
 
-    this.mqttClient.on("reconnect", () => {
+    this.mqttClient?.on("disconnect", (data) => {
+      logger.warn(
+        `Disconnected from ${mqttGlobalConfig.host}:${mqttGlobalConfig.port}. Reason: ${data.reasonCode} - ${data.properties?.reasonString}.`
+      );
+    });
+
+    this.mqttClient?.on("reconnect", () => {
+      logger.info(
+        `Reconnected to ${mqttGlobalConfig.host}:${mqttGlobalConfig.port}.`
+      );
+
       for (const topic in this.buffer)
         this.publishInternalAsync(topic, this.buffer[topic]);
 
@@ -74,11 +84,11 @@ export default class MqttAdapter {
 
       if (!this.mqttClient.connected) return;
 
-      await this.mqttClient.unsubscribe(this.toFullTopic(topic));
+      await this.mqttClient.unsubscribeAsync(this.toFullTopic(topic));
 
-      await this.mqttClient.publish(this.toFullTopic(topic), message);
+      await this.mqttClient.publishAsync(this.toFullTopic(topic), message);
 
-      await this.mqttClient.subscribe(this.toFullTopic(topic));
+      await this.mqttClient.subscribeAsync(this.toFullTopic(topic));
     } catch (e) {
       logger.error("Couldn't publish to mqtt", e);
     }
@@ -112,7 +122,7 @@ export default class MqttAdapter {
 const createMqttClientAsync = async (
   mqttGlobalConfig?: MqttGlobalConfiguration
 ) => {
-  let mqttClient: AsyncMqttClient | undefined;
+  let mqttClient: MqttClient | undefined;
 
   if (!mqttGlobalConfig) return mqttClient;
 
@@ -125,12 +135,13 @@ const createMqttClientAsync = async (
         username: mqttGlobalConfig.username,
         password: mqttGlobalConfig.password,
         protocol: "mqtt",
+        reconnectOnConnackError: true,
       },
       true
     );
 
     logger.info(
-      `Connected to ${mqttGlobalConfig.host}:${mqttGlobalConfig.port}`
+      `Connected to ${mqttGlobalConfig.host}:${mqttGlobalConfig.port}.`
     );
 
     mqttClient.on("error", (e) => {
