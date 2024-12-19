@@ -1,5 +1,3 @@
-import { setTimeout } from "timers/promises";
-
 import { IpcMain, WebContents } from "electron";
 import log from "electron-log";
 
@@ -35,6 +33,7 @@ export default class Chlorinator implements IChlorinator {
   private in2: number;
 
   private outputValue: number;
+  private pumpSwitchState: SwitchState;
 
   constructor(
     config: ChlorinatorConfiguration,
@@ -57,9 +56,11 @@ export default class Chlorinator implements IChlorinator {
         event.sender.send(ChlorinatorChannels.Output, this.outputValue)
       );
 
-    this.mqttAdapter.on(ChlorinatorChannels.SetOutput, (message) =>
-      this.setOutput(parseFloat(message.toString()))
-    );
+    if (this.mqttAdapter) {
+      this.mqttAdapter.on(ChlorinatorChannels.SetOutput, (message) =>
+        this.setOutput(parseFloat(message.toString()))
+      );
+    }
 
     this.webContents.send(ChlorinatorChannels.Output, this.outputValue);
 
@@ -104,6 +105,8 @@ export default class Chlorinator implements IChlorinator {
   }
 
   switch = (state: SwitchState) => {
+    this.pumpSwitchState = state;
+
     const switchedValue = state === SwitchState.On ? this.outputValue : 0;
 
     if (this.mqttAdapter) {
@@ -143,19 +146,20 @@ export default class Chlorinator implements IChlorinator {
     this.pwmWrite(value);
   };
 
-  private beginCycle = async (config: ChlorinatorConfiguration) => {
+  private beginCycle = (config: ChlorinatorConfiguration) => {
     this.in1 = config.cell.in1;
     this.in2 = config.cell.in2;
 
-    let initialized = false;
+    setMode(this.in1, GpioMode.Output);
+    pwmWrite(this.in1, 0);
 
-    while (true) {
+    setMode(this.in2, GpioMode.Output);
+    pwmWrite(this.in2, 0);
+
+    this.outputGpio = Store.get<string, number>(STORE_KEYS.ChlorinatorPin, 1);
+
+    setInterval(() => {
       try {
-        let outputGpio = Store.get<string, number>(
-          STORE_KEYS.ChlorinatorPin,
-          1
-        );
-
         const cellStartDate = Store.get<string, string>(
           STORE_KEYS.ChlorinatorActiveCellStart,
           DateTime.utc().toFormat("yyyy-MM-dd")
@@ -168,38 +172,28 @@ export default class Chlorinator implements IChlorinator {
         let switchCells = max <= DateTime.utc();
 
         if (switchCells) {
-          outputGpio = outputGpio === 1 ? 2 : 1;
+          const outputGpio = this.outputGpio === 1 ? 2 : 1;
 
           Store.set(STORE_KEYS.ChlorinatorPin, outputGpio);
           Store.set(
             STORE_KEYS.ChlorinatorActiveCellStart,
             DateTime.utc().toFormat("yyyy-MM-dd")
           );
-        }
 
-        if (!initialized || switchCells) {
           this.outputGpio = outputGpio;
 
-          logger.debug(`Setting in${this.outputGpio} to be the pwm output.`);
-
-          setMode(this.in1, GpioMode.Output);
-          pwmWrite(this.in1, 0);
-
-          setMode(this.in2, GpioMode.Output);
-          pwmWrite(this.in2, 0);
+          this.pwmWrite(this.outputValue);
         }
       } catch (e) {
-        logger.error("Couldn't set output.", e);
+        logger.error("Couldn't check cycle.", e);
       }
-
-      if (!initialized) initialized = true;
-
-      await setTimeout(1000 * 60 * 60); // Check every hour.
-    }
+    }, 1000 * 60 * 60); // Check every hour.
   };
 
   private pwmWrite = (value: number) => {
     try {
+      if (this.pumpSwitchState === SwitchState.Off && value > 0) return;
+
       // NEVER go to 100% of the output capability - prevent possible heat issues.
       const max = 255 * 0.8;
 
@@ -208,10 +202,9 @@ export default class Chlorinator implements IChlorinator {
       );
 
       const on = this.outputGpio === 1 ? this.in1 : this.in2;
+      const off = this.outputGpio === 1 ? this.in2 : this.in1;
 
       logger.debug(`Setting ${on} to pwm duty cycle value ${dutyCycle}`);
-
-      const off = this.outputGpio === 1 ? this.in2 : this.in1;
 
       pwmWrite(off, 0);
       pwmWrite(on, dutyCycle);
