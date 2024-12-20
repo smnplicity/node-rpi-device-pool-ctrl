@@ -38,6 +38,8 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
 
   private loggedError = false;
 
+  private disconnectNotifyTimeout: NodeJS.Timeout | null = null;
+
   constructor(
     ipcMain: IpcMain,
     webContents: WebContents,
@@ -64,6 +66,8 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
       issueRefreshOnPing: true,
     })
       .on("connected", () => {
+        this.clearDisconnectTimeout();
+
         this.loggedError = false;
         disconnected = false;
 
@@ -73,15 +77,19 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
         if (!disconnected) {
           disconnected = true;
 
-          this.emit("switch", SwitchState.Off);
-
-          this.dpsObject = null;
-
-          this.webContents.send(PumpChannels.kW, null);
-          this.webContents.send(PumpChannels.Voltage, null);
-          this.webContents.send(PumpChannels.mA, null);
-
           logger.error("Disconnected.");
+
+          this.clearDisconnectTimeout();
+
+          this.disconnectNotifyTimeout = setTimeout(() => {
+            this.emit("switch", SwitchState.Off);
+
+            this.dpsObject = null;
+
+            this.webContents.send(PumpChannels.kW, null);
+            this.webContents.send(PumpChannels.Voltage, null);
+            this.webContents.send(PumpChannels.mA, null);
+          }, 10000);
         }
 
         this.connect();
@@ -138,6 +146,13 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
     super.on(channel, listener);
 
     return this;
+  };
+
+  private clearDisconnectTimeout = () => {
+    if (this.disconnectNotifyTimeout) {
+      clearTimeout(this.disconnectNotifyTimeout);
+      this.disconnectNotifyTimeout = null;
+    }
   };
 
   private connect = () => {

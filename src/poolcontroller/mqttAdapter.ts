@@ -82,7 +82,13 @@ export default class MqttAdapter {
 
       if (!ignoreBuffer) this.buffer[topic] = message;
 
-      if (!this.mqttClient.connected) return;
+      if (
+        !this.mqttClient.connected ||
+        this.mqttClient.reconnecting ||
+        this.mqttClient.disconnected ||
+        this.mqttClient.disconnecting
+      )
+        return;
 
       await this.mqttClient.unsubscribeAsync(this.toFullTopic(topic));
 
