@@ -40,6 +40,10 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
 
   private disconnectNotifyTimeout: NodeJS.Timeout | null = null;
 
+  private connecting: boolean = false;
+
+  private scheduled?: boolean;
+
   constructor(
     ipcMain: IpcMain,
     webContents: WebContents,
@@ -72,6 +76,8 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
         disconnected = false;
 
         logger.info("Connected.");
+
+        this.emit("connected");
       })
       .on("disconnected", () => {
         if (!disconnected) {
@@ -130,7 +136,9 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
     this.connect();
   }
 
-  switch = (value: SwitchState) => {
+  switch = (value: SwitchState, scheduled?: boolean) => {
+    this.scheduled = scheduled;
+
     const currentValue = this.getDpsValue<string>(DpsIndex.Switch);
 
     if (value === currentValue) return;
@@ -155,13 +163,32 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
     }
   };
 
-  private connect = () => {
-    this.device
-      .find()
-      .then(() => {
-        this.device.connect();
-      })
-      .catch(this.connect);
+  private connect = async () => {
+    if (this.connecting) return;
+
+    this.connecting = true;
+
+    while (this.connecting) {
+      try {
+        const res = await this.device.find();
+
+        if (!res) {
+          log.error("Couldn't find device. Trying again.");
+          continue;
+        }
+
+        var connected = await this.device.connect();
+
+        if (!connected) {
+          log.error("Failed to connect. Trying again.");
+          continue;
+        }
+
+        this.connecting = false;
+      } catch (e) {
+        log.error("Couldn't connect.", e);
+      }
+    }
   };
 
   private analyseUpdate = (incoming: DPSObject) => {

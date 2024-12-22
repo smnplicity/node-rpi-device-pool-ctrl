@@ -3,6 +3,7 @@ export enum SystemChannels {
   Switch = "system/switch",
   SetSwitch = "system/switch/set",
   Network = "system/network",
+  Schedule = "system/schedule",
 }
 
 export enum ConfigurationChannels {

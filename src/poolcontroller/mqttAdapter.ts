@@ -33,8 +33,10 @@ export default class MqttAdapter {
     this.mqttClient?.on("message", (fullTopic, message, packet) => {
       if (packet.retain) return;
 
-      if (this.subscribedTopics.has(fullTopic))
+      if (this.subscribedTopics.has(fullTopic)) {
+        logger.info(`Received ${fullTopic}: ${message}`);
         this.emitter.emit(fullTopic, message);
+      }
     });
 
     this.mqttClient?.on("disconnect", (data) => {

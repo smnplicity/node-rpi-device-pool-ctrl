@@ -147,6 +147,8 @@ export default class Chlorinator implements IChlorinator {
   };
 
   private beginCycle = (config: ChlorinatorConfiguration) => {
+    logger.info("Begin cycling chlorinator cells.");
+
     this.in1 = config.cell.in1;
     this.in2 = config.cell.in2;
 

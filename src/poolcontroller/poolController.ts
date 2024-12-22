@@ -1,12 +1,15 @@
 import { IpcMain, WebContents } from "electron";
 import log from "electron-log";
 
+import schedule from "node-schedule";
+
 import { ConfigurationChannels, SystemChannels } from "./channels";
 
-import { createMqttAdapterAsync } from "./mqttAdapter";
+import MqttAdapter, { createMqttAdapterAsync } from "./mqttAdapter";
 import {
   ModuleConfiguration,
   MqttGlobalConfiguration,
+  PumpSchedule,
   SYSTEM_LOG_SCOPE,
   SwitchState,
   SystemStatus,
@@ -23,6 +26,8 @@ import ConfigurationProvider, {
 } from "./configurationProvider";
 import { createWifiConnectivityListener } from "./modules/network";
 
+const logger = log.create(SYSTEM_LOG_SCOPE);
+
 export default class PoolController {
   private ipcMain: IpcMain;
   private webContents: WebContents;
@@ -33,6 +38,9 @@ export default class PoolController {
 
   private pump: IPump | null = null;
   private chlorinator: IChlorinator | null = null;
+
+  private schedulePumpOn?: schedule.Job;
+  private schedulePumpOff?: schedule.Job;
 
   constructor(ipcMain: IpcMain, webContents: WebContents) {
     this.ipcMain = ipcMain;
@@ -98,6 +106,8 @@ export default class PoolController {
           this.webContents.send(SystemChannels.Status, this.status);
         }
       });
+
+      pump.on("connected", () => this.ensurePumpScheduler(mqttAdapter));
     } else {
       this.switch = SwitchState.On;
       this.status = SystemStatus.Available;
@@ -141,5 +151,59 @@ export default class PoolController {
     this.ipcMain.on(SystemChannels.Status, (event) => {
       event.sender.send(SystemChannels.Status, this.status);
     });
+  };
+
+  private ensurePumpScheduler = (mqttAdapter: MqttAdapter) => {
+    if (!this.schedulePumpOn) {
+      mqttAdapter.on(SystemChannels.Schedule, (data) => {
+        const scheduleTimes = JSON.parse(data.toString()) as PumpSchedule;
+
+        const pad = (val: string) => {
+          const s = `0${val}`;
+          return s.substring(s.length - 2);
+        };
+
+        const on = pad(scheduleTimes.on);
+        const off = pad(scheduleTimes.off);
+
+        logger.info(`Pump scheduled to run between ${on} and ${off}.`);
+
+        const scheduleOnParts = on.split(":");
+        const scheduleOnHour = scheduleOnParts[0];
+        const scheduleOnMinutes = scheduleOnParts[1];
+
+        if (this.schedulePumpOn) {
+          this.schedulePumpOn.reschedule(
+            `${scheduleOnMinutes} ${scheduleOnHour}`
+          );
+        } else {
+          this.schedulePumpOn = schedule.scheduleJob(
+            `${scheduleOnMinutes} ${scheduleOnHour}`,
+            () => {
+              logger.info("Scheduled to turn pool pump on.");
+              this.pump.switch(SwitchState.On, true);
+            }
+          );
+        }
+
+        const scheduleOffParts = off.split(":");
+        const scheduleOffHour = scheduleOffParts[0];
+        const scheduleOffMinutes = scheduleOffParts[1];
+
+        if (this.schedulePumpOff) {
+          this.schedulePumpOn.reschedule(
+            `${scheduleOffMinutes} ${scheduleOffHour}`
+          );
+        } else {
+          this.schedulePumpOff = schedule.scheduleJob(
+            `${scheduleOffMinutes} ${scheduleOffHour}`,
+            () => {
+              logger.info("Scheduled to turn pool pump off.");
+              this.pump.switch(SwitchState.Off, true);
+            }
+          );
+        }
+      });
+    }
   };
 }

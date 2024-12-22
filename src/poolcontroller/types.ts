@@ -13,6 +13,11 @@ export enum SystemStatus {
   Error,
 }
 
+export interface PumpSchedule {
+  on: string;
+  off: string;
+}
+
 export interface TuyaConfiguration {
   ipAddress: string;
   deviceId: string;
