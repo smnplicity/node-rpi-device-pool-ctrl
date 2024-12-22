@@ -26,7 +26,7 @@ import ConfigurationProvider, {
 } from "./configurationProvider";
 import { createWifiConnectivityListener } from "./modules/network";
 
-const logger = log.create(SYSTEM_LOG_SCOPE);
+const logger = log.scope(SYSTEM_LOG_SCOPE);
 
 export default class PoolController {
   private ipcMain: IpcMain;
@@ -163,14 +163,17 @@ export default class PoolController {
           return s.substring(s.length - 2);
         };
 
-        const on = pad(scheduleTimes.on);
-        const off = pad(scheduleTimes.off);
+        const scheduleOnParts = scheduleTimes.on.split(":");
+        const scheduleOnHour = pad(scheduleOnParts[0]);
+        const scheduleOnMinutes = pad(scheduleOnParts[1]);
 
-        logger.info(`Pump scheduled to run between ${on} and ${off}.`);
+        const scheduleOffParts = scheduleTimes.off.split(":");
+        const scheduleOffHour = pad(scheduleOffParts[0]);
+        const scheduleOffMinutes = pad(scheduleOffParts[1]);
 
-        const scheduleOnParts = on.split(":");
-        const scheduleOnHour = scheduleOnParts[0];
-        const scheduleOnMinutes = scheduleOnParts[1];
+        logger.info(
+          `Pump scheduled to run between ${scheduleOnHour}:${scheduleOnMinutes} and ${scheduleOffHour}:${scheduleOffMinutes}.`
+        );
 
         if (this.schedulePumpOn) {
           this.schedulePumpOn.reschedule(
@@ -185,10 +188,6 @@ export default class PoolController {
             }
           );
         }
-
-        const scheduleOffParts = off.split(":");
-        const scheduleOffHour = scheduleOffParts[0];
-        const scheduleOffMinutes = scheduleOffParts[1];
 
         if (this.schedulePumpOff) {
           this.schedulePumpOn.reschedule(
