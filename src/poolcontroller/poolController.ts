@@ -181,7 +181,7 @@ export default class PoolController {
           );
         } else {
           this.schedulePumpOn = schedule.scheduleJob(
-            `${scheduleOnMinutes} ${scheduleOnHour}`,
+            `${scheduleOnMinutes} ${scheduleOnHour} * * *`,
             () => {
               logger.info("Scheduled to turn pool pump on.");
               this.pump.switch(SwitchState.On, true);
@@ -195,7 +195,7 @@ export default class PoolController {
           );
         } else {
           this.schedulePumpOff = schedule.scheduleJob(
-            `${scheduleOffMinutes} ${scheduleOffHour}`,
+            `${scheduleOffMinutes} ${scheduleOffHour} * * *`,
             () => {
               logger.info("Scheduled to turn pool pump off.");
               this.pump.switch(SwitchState.Off, true);
