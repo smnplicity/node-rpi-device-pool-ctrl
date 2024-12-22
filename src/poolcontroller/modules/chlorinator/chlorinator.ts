@@ -1,12 +1,9 @@
 import { IpcMain, WebContents } from "electron";
 import log from "electron-log";
 
-import { DateTime } from "luxon";
+import schedule from "node-schedule";
 
-import INA226, {
-  Ina226ConnectInfo,
-  Ina226DataChange,
-} from "@node-rpi-gpio/ina226";
+import { DateTime } from "luxon";
 
 import { ChlorinatorChannels } from "../../channels";
 
@@ -63,43 +60,6 @@ export default class Chlorinator implements IChlorinator {
     }
 
     this.webContents.send(ChlorinatorChannels.Output, this.outputValue);
-
-    if (config.powerConsumption) {
-      const ina226 = new INA226(config.powerConsumption)
-        .on("connect", (connectInfo: Ina226ConnectInfo) => {
-          logger.info(`INA226 connected: ${JSON.stringify(connectInfo)}`);
-        })
-        .on("debug", (data: any) => {
-          //logger.debug(`INA226: ${data}`);
-        })
-        .on("error", (error: Error) => {
-          logger.error("INA226", error);
-        })
-        .on("change", (data: Ina226DataChange) => {
-          const kw = Number((Math.abs(data.power) / 1000.0).toFixed(2));
-          const current = Math.abs(data.current);
-
-          this.webContents.send(ChlorinatorChannels.Voltage, data.busVoltage);
-          this.webContents.send(ChlorinatorChannels.kW, kw);
-          this.webContents.send(ChlorinatorChannels.mA, current);
-
-          if (this.mqttAdapter) {
-            this.mqttAdapter.publishAsync(
-              ChlorinatorChannels.Voltage,
-              data.busVoltage.toString()
-            );
-            this.mqttAdapter.publishAsync(
-              ChlorinatorChannels.kW,
-              kw.toString()
-            );
-            this.mqttAdapter.publishAsync(
-              ChlorinatorChannels.mA,
-              current.toString()
-            );
-          }
-        })
-        .connect();
-    }
 
     this.beginCycle(config);
   }
@@ -160,7 +120,7 @@ export default class Chlorinator implements IChlorinator {
 
     this.outputGpio = Store.get<string, number>(STORE_KEYS.ChlorinatorPin, 1);
 
-    setInterval(() => {
+    schedule.scheduleJob("0 0-23 * * *", () => {
       try {
         const cellStartDate = Store.get<string, string>(
           STORE_KEYS.ChlorinatorActiveCellStart,
@@ -189,7 +149,7 @@ export default class Chlorinator implements IChlorinator {
       } catch (e) {
         logger.error("Couldn't check cycle.", e);
       }
-    }, 1000 * 60 * 60); // Check every hour.
+    });
   };
 
   private pwmWrite = (value: number) => {

@@ -1,6 +1,5 @@
 import type { ForgeConfig } from "@electron-forge/shared-types";
 import { MakerZIP } from "@electron-forge/maker-zip";
-import { MakerDeb } from "@electron-forge/maker-deb";
 
 import { WebpackPlugin } from "@electron-forge/plugin-webpack";
 

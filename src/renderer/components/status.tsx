@@ -1,5 +1,3 @@
-import { Oval } from "react-loader-spinner";
-
 import { SystemStatus } from "../../poolcontroller/types";
 import { SystemChannels } from "../../poolcontroller/channels";
 import { useChannelValue } from "../hooks";
@@ -25,16 +23,6 @@ const Status = ({ children }: Props) => {
         alignContent: "center",
         justifyContent: "center"
         }}>
-        <Oval
-          height={80}
-          width={80}
-          color="#fff"
-          visible={true}
-          secondaryColor="#aaa"
-          strokeWidth={2}
-          strokeWidthSecondary={2}
-        
-        />
         <p style={{marginLeft: "16px"}}>Initializing system...</p>
       </div>);
   }
