@@ -10,7 +10,18 @@ import { rendererConfig } from "./webpack.renderer.config";
 const config: ForgeConfig = {
   packagerConfig: {},
   rebuildConfig: {},
-  makers: [new MakerZIP({}, ["darwin"]), new MakerDeb({})],
+  makers: [
+    new MakerZIP({}, ["darwin"]),
+    {
+      name: "@electron-forge/maker-deb",
+      platforms: ["linux"],
+      config: {
+        options: {
+          compression: "gzip",
+        },
+      },
+    },
+  ],
   plugins: [
     new WebpackPlugin({
       mainConfig,
