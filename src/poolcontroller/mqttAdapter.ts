@@ -30,9 +30,7 @@ export default class MqttAdapter {
     this.mqttGlobalConfig = mqttGlobalConfig;
     this.mqttClient = mqttClient;
 
-    this.mqttClient?.on("message", (fullTopic, message, packet) => {
-      if (packet.retain) return;
-
+    this.mqttClient?.on("message", (fullTopic, message) => {
       if (this.subscribedTopics.has(fullTopic)) {
         logger.info(`Received ${fullTopic}: ${message}`);
         this.emitter.emit(fullTopic, message);
