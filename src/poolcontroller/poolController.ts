@@ -108,6 +108,8 @@ export default class PoolController {
       });
 
       pump.on("connected", () => this.ensurePumpScheduler(mqttAdapter));
+
+      this.pump = pump;
     } else {
       this.switch = SwitchState.On;
       this.status = SystemStatus.Available;
