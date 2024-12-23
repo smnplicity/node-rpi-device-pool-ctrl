@@ -11,6 +11,7 @@ export interface Settings {
 }
 
 export const STORE_KEYS = {
+  Chlorinator: "chlorinator",
   ChlorinatorPin: "chlorinator.pin",
   ChlorinatorOutput: "chlorinator.output",
   ChlorinatorActiveCellStart: "chlorinator.activeCellStart",

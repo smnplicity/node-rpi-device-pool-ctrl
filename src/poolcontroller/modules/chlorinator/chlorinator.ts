@@ -55,7 +55,7 @@ export default class Chlorinator implements IChlorinator {
 
     if (this.mqttAdapter) {
       this.mqttAdapter.on(ChlorinatorChannels.SetOutput, (message) =>
-        this.setOutput(parseFloat(message.toString()))
+        this.setOutput(parseFloat(message.toString()), true)
       );
     }
 
@@ -79,7 +79,7 @@ export default class Chlorinator implements IChlorinator {
     this.pwmWrite(switchedValue);
   };
 
-  private setOutput = (rawValue: number) => {
+  private setOutput = (rawValue: number, skipMqttNotify?: boolean) => {
     const value = Math.min(100, Math.max(0, rawValue));
 
     logger.debug(`${this.outputValue} to ${value} (raw: ${rawValue})`);
@@ -94,9 +94,13 @@ export default class Chlorinator implements IChlorinator {
       logger.error("Couldn't persist output value to store.", e);
     }
 
-    this.webContents.send(ChlorinatorChannels.Output, this.outputValue);
+    try {
+      this.webContents.send(ChlorinatorChannels.Output, this.outputValue);
+    } catch (e) {
+      logger.error("Couldn't notify web frontend.", e);
+    }
 
-    if (this.mqttAdapter) {
+    if (!skipMqttNotify && this.mqttAdapter) {
       this.mqttAdapter.publishAsync(
         ChlorinatorChannels.Output,
         this.outputValue.toString()
@@ -136,11 +140,13 @@ export default class Chlorinator implements IChlorinator {
         if (switchCells) {
           const outputGpio = this.outputGpio === 1 ? 2 : 1;
 
-          Store.set(STORE_KEYS.ChlorinatorPin, outputGpio);
-          Store.set(
-            STORE_KEYS.ChlorinatorActiveCellStart,
-            DateTime.utc().toFormat("yyyy-MM-dd")
-          );
+          logger.info(`Switching to cell ${this.outputGpio}.`);
+
+          Store.set(STORE_KEYS.Chlorinator, {
+            pin: outputGpio,
+            activeCellStart: DateTime.utc().toFormat("yyyy-MM-dd"),
+            output: this.outputValue,
+          });
 
           this.outputGpio = outputGpio;
 
