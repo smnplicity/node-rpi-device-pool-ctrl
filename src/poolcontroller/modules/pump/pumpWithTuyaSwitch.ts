@@ -56,8 +56,6 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
 
     this.mqttAdapter = mqttAdapter;
 
-    let disconnected = false;
-
     const tuyaConfig = configuration;
 
     this.device = new TuyAPI({
@@ -73,30 +71,27 @@ export default class PumpWithTuyaSwitch extends EventEmitter implements IPump {
         this.clearDisconnectTimeout();
 
         this.loggedError = false;
-        disconnected = false;
 
         logger.info("Connected.");
 
         this.emit("connected");
       })
       .on("disconnected", () => {
-        if (!disconnected) {
-          disconnected = true;
+        logger.error("Disconnected.");
 
-          logger.error("Disconnected.");
+        this.clearDisconnectTimeout();
+
+        this.disconnectNotifyTimeout = setTimeout(() => {
+          this.emit("switch", SwitchState.Off);
+
+          this.dpsObject = null;
+
+          this.webContents.send(PumpChannels.kW, null);
+          this.webContents.send(PumpChannels.Voltage, null);
+          this.webContents.send(PumpChannels.mA, null);
 
           this.clearDisconnectTimeout();
-
-          this.disconnectNotifyTimeout = setTimeout(() => {
-            this.emit("switch", SwitchState.Off);
-
-            this.dpsObject = null;
-
-            this.webContents.send(PumpChannels.kW, null);
-            this.webContents.send(PumpChannels.Voltage, null);
-            this.webContents.send(PumpChannels.mA, null);
-          }, 10000);
-        }
+        }, 10000);
 
         this.connect();
       })

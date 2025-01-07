@@ -66,6 +66,8 @@ const createPoolController = (): void => {
 //app.commandLine.appendSwitch("--no-sandbox");
 
 app.on("window-all-closed", () => {
+  poolCtrl.stop();
+
   if (process.platform !== "darwin") {
     app.quit();
   }

@@ -40,6 +40,16 @@ export const setLevel = (gpio: number, level: GpioLevel) => {
   run(gpio, "w", [level.toString()]);
 };
 
+export const getPwmRange = (gpio: number) => {
+  const output = run(gpio, "prg");
+
+  try {
+    return parseInt(output);
+  } catch {
+    return 255;
+  }
+};
+
 export const pwmWrite = (gpio: number, dutyCycle: number) => {
   const output = run(gpio, "p", [Math.round(dutyCycle).toString()]);
 

@@ -10,7 +10,7 @@ import { ChlorinatorChannels } from "../../channels";
 import { ChlorinatorConfiguration, SwitchState } from "../../types";
 import Store, { STORE_KEYS } from "../../storage";
 import MqttAdapter from "../../mqttAdapter";
-import { GpioMode, pwmWrite, setMode } from "../../gpioInterop";
+import { GpioMode, pwmWrite, setMode, getPwmRange } from "../../gpioInterop";
 
 import IChlorinator, { CHLORINATOR_LOG_SCOPE } from "./types";
 
@@ -82,9 +82,9 @@ export default class Chlorinator implements IChlorinator {
   private setOutput = (rawValue: number, skipMqttNotify?: boolean) => {
     const value = Math.min(100, Math.max(0, rawValue));
 
-    logger.debug(`${this.outputValue} to ${value} (raw: ${rawValue})`);
-
     if (value === this.outputValue) return;
+
+    logger.debug(`${this.outputValue} to ${value} (raw: ${rawValue})`);
 
     this.outputValue = value;
 
@@ -162,14 +162,17 @@ export default class Chlorinator implements IChlorinator {
     try {
       if (this.pumpSwitchState === SwitchState.Off && value > 0) return;
 
+      const on = this.outputGpio === 1 ? this.in1 : this.in2;
+
       // NEVER go to 100% of the output capability - prevent possible heat issues.
-      const max = 255 * 0.8;
+      const range = getPwmRange(on);
+
+      const max = range * 0.8;
 
       const dutyCycle = Math.round(
         Math.min(max, Math.max(0, max * (value / 100.0)))
       );
 
-      const on = this.outputGpio === 1 ? this.in1 : this.in2;
       const off = this.outputGpio === 1 ? this.in2 : this.in1;
 
       logger.debug(`Setting ${on} to pwm duty cycle value ${dutyCycle}`);

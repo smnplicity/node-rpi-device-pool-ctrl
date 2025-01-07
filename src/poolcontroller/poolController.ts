@@ -155,6 +155,10 @@ export default class PoolController {
     });
   };
 
+  stop = () => {
+    this.chlorinator?.switch(SwitchState.Off);
+  };
+
   private ensurePumpScheduler = (mqttAdapter: MqttAdapter) => {
     if (!this.schedulePumpOn) {
       mqttAdapter.on(SystemChannels.Schedule, (data) => {
