@@ -62,6 +62,7 @@
     "@types/luxon": "^3.3.1",
     "@types/node-schedule": "^2.1.7",
     "@types/node-wifi": "^2.0.0",
+    "@types/semaphore": "^1.1.4",
     "electron-debug": "^3.2.0",
     "electron-log": "^4.4.8",
     "electron-squirrel-startup": "^1.0.0",
@@ -76,6 +77,7 @@
     "react-dom": "^18.2.0",
     "react-json-pretty": "^2.2.0",
     "react-router-dom": "^6.8.1",
+    "semaphore": "^1.1.0",
     "tuyapi": "^7.5.2"
   }
 }

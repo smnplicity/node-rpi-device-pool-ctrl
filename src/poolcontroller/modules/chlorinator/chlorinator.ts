@@ -5,6 +5,8 @@ import schedule from "node-schedule";
 
 import { DateTime } from "luxon";
 
+import semaphore from "semaphore";
+
 import { ChlorinatorChannels } from "../../channels";
 
 import { ChlorinatorConfiguration, SwitchState } from "../../types";
@@ -31,6 +33,8 @@ export default class Chlorinator implements IChlorinator {
 
   private outputValue: number;
   private pumpSwitchState: SwitchState;
+
+  private pwmWriteLock = semaphore(1);
 
   constructor(
     config: ChlorinatorConfiguration,
@@ -111,7 +115,9 @@ export default class Chlorinator implements IChlorinator {
   };
 
   private beginCycle = (config: ChlorinatorConfiguration) => {
-    logger.info("Begin cycling chlorinator cells.");
+    logger.info(
+      `Begin cycling chlorinator cells every ${config.cell.descaleCycleDays} day(s).`
+    );
 
     this.in1 = config.cell.in1;
     this.in2 = config.cell.in2;
@@ -131,11 +137,13 @@ export default class Chlorinator implements IChlorinator {
           DateTime.utc().toFormat("yyyy-MM-dd")
         );
 
-        const max = DateTime.fromFormat(cellStartDate, "yyyy-MM-dd").plus({
+        const max = DateTime.fromFormat(cellStartDate, "yyyy-MM-dd", {
+          zone: "utc",
+        }).plus({
           days: config.cell.descaleCycleDays,
         });
 
-        let switchCells = max <= DateTime.utc();
+        const switchCells = max < DateTime.utc();
 
         if (switchCells) {
           const outputGpio = this.outputGpio === 1 ? 2 : 1;
@@ -158,29 +166,36 @@ export default class Chlorinator implements IChlorinator {
     });
   };
 
-  private pwmWrite = (value: number) => {
-    try {
-      if (this.pumpSwitchState === SwitchState.Off && value > 0) return;
+  private pwmWrite = (value: number) =>
+    this.pwmWriteLock.take(async () => {
+      try {
+        if (this.pumpSwitchState === SwitchState.Off && value > 0) return;
 
-      const on = this.outputGpio === 1 ? this.in1 : this.in2;
+        const on = this.outputGpio === 1 ? this.in1 : this.in2;
 
-      // NEVER go to 100% of the output capability - prevent possible heat issues.
-      const range = getPwmRange(on);
+        // NEVER go to 100% of the output capability - prevent possible heat issues.
+        const range = getPwmRange(on);
 
-      const max = range * 0.8;
+        const max = range * 0.8;
 
-      const dutyCycle = Math.round(
-        Math.min(max, Math.max(0, max * (value / 100.0)))
-      );
+        const dutyCycle = Math.round(
+          Math.min(max, Math.max(0, max * (value / 100.0)))
+        );
 
-      const off = this.outputGpio === 1 ? this.in2 : this.in1;
+        const off = this.outputGpio === 1 ? this.in2 : this.in1;
 
-      logger.debug(`Setting ${on} to pwm duty cycle value ${dutyCycle}`);
+        logger.debug(`Setting ${on} to pwm duty cycle value ${dutyCycle}.`);
 
-      pwmWrite(off, 0);
-      pwmWrite(on, dutyCycle);
-    } catch (e) {
-      logger.error("Couldn't set duty cycle.", e);
-    }
-  };
+        pwmWrite(off, 0);
+        await this.sleep(1000);
+        pwmWrite(on, dutyCycle);
+      } catch (e) {
+        logger.error("Couldn't set duty cycle.", e);
+      } finally {
+        this.pwmWriteLock.leave();
+      }
+    });
+
+  private sleep = (waitTimeInMs: number) =>
+    new Promise((resolve) => setTimeout(resolve, waitTimeInMs));
 }
