@@ -66,7 +66,9 @@ const run = (gpio: number, cmd: string, params?: string[]) => {
 
     logger.debug(fullCmd);
 
-    return execSync(fullCmd).toString();
+    const res = execSync(fullCmd);
+
+    return res?.byteLength > 0 ? res.toString() : "";
   } catch (e: unknown) {
     let error: Error = new Error("Unknown error.");
 
