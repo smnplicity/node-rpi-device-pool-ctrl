@@ -50,8 +50,6 @@ export default class MqttAdapter {
 
       for (const topic in this.buffer)
         this.publishInternalAsync(topic, this.buffer[topic]);
-
-      this.buffer = {};
     });
   }
 
@@ -74,13 +72,12 @@ export default class MqttAdapter {
 
   private publishInternalAsync = async (
     topic: string,
-    message: Buffer | string,
-    ignoreBuffer?: boolean
+    message: Buffer | string
   ) => {
     try {
       if (!this.mqttClient) return;
 
-      if (!ignoreBuffer) this.buffer[topic] = message;
+      this.buffer[topic] = message;
 
       if (
         !this.mqttClient.connected ||
@@ -116,12 +113,6 @@ export default class MqttAdapter {
     if (!this.mqttGlobalConfig.topicPrefix) return topic;
 
     return `${this.mqttGlobalConfig.topicPrefix}/${topic}`;
-  };
-
-  private fromFullTopic = (topic: string) => {
-    if (!this.mqttGlobalConfig.topicPrefix) return topic;
-
-    return topic.replace(`${this.mqttGlobalConfig.topicPrefix}/`, "");
   };
 }
 
